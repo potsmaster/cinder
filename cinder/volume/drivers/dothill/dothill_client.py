@@ -293,10 +293,11 @@ class DotHillClient(object):
         portals = {}
         prop = ""
         tree = self._request("/show/ports")
-        if backend_type == "linear":
-            prop = "primary-ip-address"
-        else:
-            prop = "ip-address"
+
+        prop = 'ip-address'
+        for el in tree.xpath("//PROPERTY[@name='primary-ip-address']"):
+            prop = 'primary-ip-address'
+            break
 
         iscsi_ips = [ip.text for ip in tree.xpath(
                      "//PROPERTY[@name='%s']" % prop)]
