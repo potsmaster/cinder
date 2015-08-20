@@ -295,7 +295,7 @@ class DotHillCommon(object):
                                                       self.backend_type)
             pool.update(backend_stats)
             if (self.backend_type == "linear" or
-                (self.backend_type == "linear" and
+                (self.backend_type == "virtual" and
                  self.backend_name not in ['A', 'B'])):
                 pool['location_info'] = ('%s:%s:%s:%s' %
                                          (src_type,
