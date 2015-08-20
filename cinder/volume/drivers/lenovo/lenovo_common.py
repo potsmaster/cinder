@@ -21,20 +21,22 @@ from cinder.volume.drivers.lenovo import lenovo_client
 
 common_opt = [
     cfg.StrOpt('lenovo_backend_name',
-               default='OpenStack',
-               help="VDisk or Pool name to use for volume creation."),
+               default='A',
+               help="Pool or Vdisk name to use for volume creation."),
     cfg.StrOpt('lenovo_backend_type',
-               choices=['linear', 'realstor'],
-               help="linear (for VDisk) or realstor (for Pool)."),
-    cfg.StrOpt('lenovo_wbi_protocol',
+               default='virtual',
+               choices=['linear', 'virtual'],
+               help="linear (for Vdisk) or virtual (for Pool)."),
+    cfg.StrOpt('lenovo_api_protocol',
+               default='https',
                choices=['http', 'https'],
-               help="Lenovo web interface protocol."),
+               help="Lenovo API interface protocol."),
 ]
 
 iscsi_opt = [
     cfg.ListOpt('lenovo_iscsi_ips',
                 default=[],
-                help="List of comma separated target iSCSI IP addresses."),
+                help="List of comma-separated target iSCSI IP addresses."),
 ]
 
 CONF = cfg.CONF
@@ -50,8 +52,8 @@ class LenovoCommon(dothill_common.DotHillCommon):
         self.vendor_name = "Lenovo"
         self.backend_name = self.config.lenovo_backend_name
         self.backend_type = self.config.lenovo_backend_type
-        self.wbi_protocol = self.config.lenovo_wbi_protocol
+        self.api_protocol = self.config.lenovo_api_protocol
         self.client = lenovo_client.LenovoClient(self.config.san_ip,
                                                  self.config.san_login,
                                                  self.config.san_password,
-                                                 self.wbi_protocol)
+                                                 self.api_protocol)

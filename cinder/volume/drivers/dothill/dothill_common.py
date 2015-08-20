@@ -32,20 +32,22 @@ LOG = logging.getLogger(__name__)
 
 common_opt = [
     cfg.StrOpt('dothill_backend_name',
-               default='OpenStack',
-               help="VDisk or Pool name to use for volume creation."),
+               default='A',
+               help="Pool or Vdisk name to use for volume creation."),
     cfg.StrOpt('dothill_backend_type',
-               choices=['linear', 'realstor'],
-               help="linear (for VDisk) or realstor (for Pool)."),
-    cfg.StrOpt('dothill_wbi_protocol',
+               default='virtual',
+               choices=['linear', 'virtual'],
+               help="linear (for Vdisk) or virtual (for Pool)."),
+    cfg.StrOpt('dothill_api_protocol',
+               default='https',
                choices=['http', 'https'],
-               help="DotHill web interface protocol."),
+               help="DotHill API interface protocol."),
 ]
 
 iscsi_opt = [
     cfg.ListOpt('dothill_iscsi_ips',
                 default=[],
-                help="List of comma separated target iSCSI IP addresses."),
+                help="List of comma-separated target iSCSI IP addresses."),
 ]
 
 CONF = cfg.CONF
@@ -66,7 +68,7 @@ class DotHillCommon(object):
         self.client = dothill.DotHillClient(self.config.san_ip,
                                             self.config.san_login,
                                             self.config.san_password,
-                                            self.config.dothill_wbi_protocol)
+                                            self.config.dothill_api_protocol)
 
     def get_version(self):
         return self.VERSION
@@ -75,7 +77,7 @@ class DotHillCommon(object):
         self.client_login()
         self._validate_backend()
         if (self.backend_type == "linear" or
-            (self.backend_type == "realstor" and
+            (self.backend_type == "virtual" and
              self.backend_name not in ['A', 'B'])):
                 self._get_owner_info(self.backend_name)
                 self._get_serial_number()
@@ -195,7 +197,7 @@ class DotHillCommon(object):
             raise exception.VolumeAttached(volume_id=volume['id'])
 
     def create_cloned_volume(self, volume, src_vref):
-        if self.backend_type == "realstor" and self.backend_name in ["A", "B"]:
+        if self.backend_type == "virtual" and self.backend_name in ["A", "B"]:
             msg = _("Create volume from volume(clone) does not have support "
                     "for virtual pool A and B.")
             LOG.error(msg)
@@ -225,7 +227,7 @@ class DotHillCommon(object):
             self.client_logout()
 
     def create_volume_from_snapshot(self, volume, snapshot):
-        if self.backend_type == "realstor" and self.backend_name in ["A", "B"]:
+        if self.backend_type == "virtual" and self.backend_name in ["A", "B"]:
             msg = _('Create volume from snapshot does not have support '
                     'for virtual pool A and B.')
             LOG.error(msg)
@@ -293,7 +295,7 @@ class DotHillCommon(object):
                                                       self.backend_type)
             pool.update(backend_stats)
             if (self.backend_type == "linear" or
-                (self.backend_type == "realstor" and
+                (self.backend_type == "linear" and
                  self.backend_name not in ['A', 'B'])):
                 pool['location_info'] = ('%s:%s:%s:%s' %
                                          (src_type,

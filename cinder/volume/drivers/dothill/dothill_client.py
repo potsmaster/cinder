@@ -275,10 +275,10 @@ class DotHillClient(object):
         return host_status
 
     def _safe_hostname(self, hostname):
-        """DotHill hostname restrictions.
+        """Modify an initiator name to match firmware requirements.
 
-           A host name cannot include " , \ in linear and " , < > \ in realstor
-           and can have a max of 15 bytes in linear and 32 bytes in realstor.
+           Initiator names cannot include certain characters and cannot exceed
+           15 bytes in 'T' firmware (32 bytes in 'G' firmware).
         """
         for ch in [',', '"', '\\', '<', '>']:
             if ch in hostname:

@@ -21,20 +21,22 @@ from cinder.volume.drivers.san.hp import hpmsa_client
 
 common_opt = [
     cfg.StrOpt('hpmsa_backend_name',
-               default='OpenStack',
-               help="VDisk or Pool name to use for volume creation."),
+               default='A',
+               help="Vdisk or Pool name to use for volume creation."),
     cfg.StrOpt('hpmsa_backend_type',
-               choices=['linear', 'realstor'],
-               help="linear (for VDisk) or realstor (for Pool)."),
-    cfg.StrOpt('hpmsa_wbi_protocol',
+               default='virtual',
+               choices=['linear', 'virtual'],
+               help="linear (for Vdisk) or virtual (for Pool)."),
+    cfg.StrOpt('hpmsa_api_protocol',
+               default='https',
                choices=['http', 'https'],
-               help="HPMSA web interface protocol."),
+               help="HPMSA API protocol."),
 ]
 
 iscsi_opt = [
     cfg.ListOpt('hpmsa_iscsi_ips',
                 default=[],
-                help="List of comma separated target iSCSI IP addresses."),
+                help="List of comma-separated target iSCSI IP addresses."),
 ]
 
 CONF = cfg.CONF
@@ -53,4 +55,4 @@ class HPMSACommon(dothill_common.DotHillCommon):
         self.client = hpmsa_client.HPMSAClient(self.config.san_ip,
                                                self.config.san_login,
                                                self.config.san_password,
-                                               self.config.hpmsa_wbi_protocol)
+                                               self.config.hpmsa_api_protocol)
