@@ -74,7 +74,7 @@ class DotHillCommon(object):
     def do_setup(self, context):
         self.client_login()
         self._validate_backend()
-        self._get_owner_info(self.backend_name)
+        self._get_owner_info()
         self._get_serial_number()
         self.client_logout()
 
@@ -98,8 +98,9 @@ class DotHillCommon(object):
     def _get_serial_number(self):
         self.serialNumber = self.client.get_serial_number()
 
-    def _get_owner_info(self, backend_name, backend_type):
-        self.owner = self.client.get_owner_info(backend_name, backend_type)
+    def _get_owner_info(self):
+        self.owner = self.client.get_owner_info(self.backend_name,
+                                                self.backend_type)
 
     def _validate_backend(self):
         if not self.client.backend_exists(self.backend_name,
