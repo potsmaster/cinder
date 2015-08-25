@@ -74,11 +74,8 @@ class DotHillCommon(object):
     def do_setup(self, context):
         self.client_login()
         self._validate_backend()
-        if (self.backend_type == "linear" or
-            (self.backend_type == "realstor" and
-             self.backend_name not in ['A', 'B'])):
-                self._get_owner_info(self.backend_name)
-                self._get_serial_number()
+        self._get_owner_info(self.backend_name)
+        self._get_serial_number()
         self.client_logout()
 
     def client_login(self):
@@ -209,7 +206,7 @@ class DotHillCommon(object):
 
         self.client_login()
         try:
-            self.client.copy_volume(orig_name, dest_name, 0,
+            self.client.copy_volume(orig_name, dest_name,
                                     self.backend_name, self.backend_type)
         except exception.DotHillRequestError as ex:
             LOG.exception(_LE("Cloning of volume %s failed."),
@@ -229,7 +226,7 @@ class DotHillCommon(object):
         dest_name = self._get_vol_name(volume['id'])
         self.client_login()
         try:
-            self.client.copy_volume(orig_name, dest_name, 0,
+            self.client.copy_volume(orig_name, dest_name,
                                     self.backend_name, self.backend_type)
         except exception.DotHillRequestError as ex:
             LOG.exception(_LE("Create volume failed from snapshot: %s"),
@@ -281,14 +278,11 @@ class DotHillCommon(object):
             backend_stats = self.client.backend_stats(self.backend_name,
                                                       self.backend_type)
             pool.update(backend_stats)
-            if (self.backend_type == "linear" or
-                (self.backend_type == "realstor" and
-                 self.backend_name not in ['A', 'B'])):
-                pool['location_info'] = ('%s:%s:%s:%s' %
-                                         (src_type,
-                                          self.serialNumber,
-                                          self.backend_name,
-                                          self.owner))
+            pool['location_info'] = ('%s:%s:%s:%s' %
+                                     (src_type,
+                                      self.serialNumber,
+                                      self.backend_name,
+                                      self.owner))
             pool['pool_name'] = self.backend_name
         except exception.DotHillRequestError:
             err = (_("Unable to get stats for backend_name: %s") %
@@ -468,7 +462,7 @@ class DotHillCommon(object):
 
         self.client_login()
         try:
-            self.client.copy_volume(source_name, dest_name, 1, dest_back_name)
+            self.client.copy_volume(source_name, dest_name, dest_back_name)
             self.client.delete_volume(source_name)
             self.client.modify_volume_name(dest_name, source_name)
             return (True, None)

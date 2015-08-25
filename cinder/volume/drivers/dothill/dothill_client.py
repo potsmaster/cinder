@@ -79,18 +79,11 @@ class DotHillClient(object):
         if return_code == '0':
             return
 
-        # Get the text message for the status code
-        msg = tree.findtext(".//PROPERTY[@name='response']")
+        # Format a message for the status code.
+        msg = "%s (%s)" % (tree.findtext(".//PROPERTY[@name='response']"),
+                           return_code)
 
-        # -3501 means the operation succeeded but there's a health issue
-        if return_code == '-3501':
-            LOG.debug('Ignoring return code %s: %s' % (return_code, msg))
-            return
-
-        msg = "ERROR %s: %s" % (return_code, msg)
-        raise exception.DotHillRequestError(
-                message=tree.findtext(".//PROPERTY[@name='response']"))
-
+        raise exception.DotHillRequestError(message=msg)
 
     def _build_request_url(self, path, *args, **kargs):
         url = self._base_url + path
@@ -112,7 +105,7 @@ class DotHillClient(object):
         """
 
         url = self._build_request_url(path, *args, **kargs)
-        LOG.debug("DotHill Request URL = " + url)
+        LOG.debug("DotHill Request URL = ", url)
         headers = {'dataType': 'api', 'sessionKey': self._session_key}
         try:
             xml = requests.get(url, headers=headers)
@@ -251,8 +244,7 @@ class DotHillClient(object):
         return [port['target-id'] for port in self.get_active_target_ports()
                 if port['port-type'] == "iSCSI"]
 
-    def linear_copy_volume(self, src_name, dest_name, same_bknd,
-                           dest_bknd_name):
+    def linear_copy_volume(self, src_name, dest_name, dest_bknd_name):
         """Copy a linear volume."""
 
         self._request("/volumecopy",
@@ -261,9 +253,7 @@ class DotHillClient(object):
                       source_volume=src_name,
                       prompt='yes')
 
-        if same_bknd == 0:
-            return
-
+        # The copy has started; now monitor until the operation completes.
         count = 0
         while True:
             tree = self._request("/show/volumecopy-status")
@@ -288,17 +278,17 @@ class DotHillClient(object):
 
         time.sleep(5)
 
-    def copy_volume(self, src_name, dest_name, same_bknd, dest_bknd_name,
+    def copy_volume(self, src_name, dest_name, dest_bknd_name,
                     backend_type='virtual'):
         """Copy a linear or virtual volume."""
 
         if backend_type == 'linear':
-            return linear_copy_volume(self, src_name, dest_name, same_bknd,
-                                      dest_bknd_name)
+            return linear_copy_volume(self, src_name,
+                                      dest_name, dest_bknd_name)
 
         # Copy a virtual volume to another in the same pool.
         status = self._request("/copy/volume", src_name, name=dest_name)
-        LOG.debug("Volume copy of volume '%s' to '%s' started.",
+        LOG.debug("Volume copy of '%s' to '%s' started.",
                   src_name, dest_name)
 
         # Loop until this volume copy is no longer in progress
@@ -306,10 +296,10 @@ class DotHillClient(object):
             time.sleep(5)
 
         # Once the copy operation is finished, check to ensure that
-        # the volume was not deleted due to a lack of space.  An
+        # the volume was not deleted because of a subsequent error.  An
         # exception will be raised if the named volume is not present.
         tree = self._request("/show/volumes", dest_name)
-        LOG.debug("Volume copy of volume '%s' to '%s' completed.",
+        LOG.debug("Volume copy of '%s' to '%s' completed.",
                   src_name, dest_name)
 
     def volume_copy_in_progress(self, src_name):
