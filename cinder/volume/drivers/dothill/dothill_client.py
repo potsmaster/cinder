@@ -75,7 +75,7 @@ class DotHillClient(object):
         if not return_code:
             raise exception.DotHillRequestError(message="No status found")
 
-        # If no error occurred, just return
+        # If no error occurred, just return.
         if return_code == '0':
             return
 
@@ -291,12 +291,12 @@ class DotHillClient(object):
         LOG.debug("Volume copy of '%s' to '%s' started.",
                   src_name, dest_name)
 
-        # Loop until this volume copy is no longer in progress
+        # Loop until this volume copy is no longer in progress.
         while self.volume_copy_in_progress(src_name):
             time.sleep(5)
 
         # Once the copy operation is finished, check to ensure that
-        # the volume was not deleted because of a subsequent error.  An
+        # the volume was not deleted because of a subsequent error. An
         # exception will be raised if the named volume is not present.
         tree = self._request("/show/volumes", dest_name)
         LOG.debug("Volume copy of '%s' to '%s' completed.",
@@ -305,7 +305,7 @@ class DotHillClient(object):
     def volume_copy_in_progress(self, src_name):
         """Check if a volume copy is in progress for the named volume."""
 
-        # 'show volume-copies' always succeeds, even if none in progress
+        # 'show volume-copies' always succeeds, even if none in progress.
         tree = self._request("/show/volume-copies")
 
         # Find 0 or 1 job(s) with source volume we're interested in
@@ -377,8 +377,12 @@ class DotHillClient(object):
         tree = self._request("/show/system")
         return tree.findtext(".//PROPERTY[@name='midplane-serial-number']")
 
-    def get_owner_info(self, backend_name):
-        tree = self._request("/show/vdisks", backend_name)
+    def get_owner_info(self, backend_name, backend_type):
+        if backend_type == 'linear':
+            tree = self._request("/show/vdisks", backend_name)
+        else:
+            tree = self._request("/show/pools", backend_name)
+
         return tree.findtext(".//PROPERTY[@name='owner']")
 
     def modify_volume_name(self, old_name, new_name):

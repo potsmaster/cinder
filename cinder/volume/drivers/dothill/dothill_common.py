@@ -98,8 +98,8 @@ class DotHillCommon(object):
     def _get_serial_number(self):
         self.serialNumber = self.client.get_serial_number()
 
-    def _get_owner_info(self, backend_name):
-        self.owner = self.client.get_owner_info(backend_name)
+    def _get_owner_info(self, backend_name, backend_type):
+        self.owner = self.client.get_owner_info(backend_name, backend_type)
 
     def _validate_backend(self):
         if not self.client.backend_exists(self.backend_name,
