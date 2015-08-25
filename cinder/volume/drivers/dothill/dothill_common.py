@@ -194,11 +194,6 @@ class DotHillCommon(object):
             raise exception.VolumeAttached(volume_id=volume['id'])
 
     def create_cloned_volume(self, volume, src_vref):
-        if self.backend_type == "realstor" and self.backend_name in ["A", "B"]:
-            msg = _("Create volume from volume(clone) does not have support "
-                    "for virtual pool A and B.")
-            LOG.error(msg)
-            raise exception.InvalidInput(reason=msg)
         self.get_volume_stats(True)
         self._assert_enough_space_for_copy(volume['size'])
         self._assert_source_detached(src_vref)
@@ -214,7 +209,8 @@ class DotHillCommon(object):
 
         self.client_login()
         try:
-            self.client.copy_volume(orig_name, dest_name, 0, self.backend_name)
+            self.client.copy_volume(orig_name, dest_name, 0,
+                                    self.backend_name, self.backend_type)
         except exception.DotHillRequestError as ex:
             LOG.exception(_LE("Cloning of volume %s failed."),
                           volume['source_volid'])
@@ -223,11 +219,6 @@ class DotHillCommon(object):
             self.client_logout()
 
     def create_volume_from_snapshot(self, volume, snapshot):
-        if self.backend_type == "realstor" and self.backend_name in ["A", "B"]:
-            msg = _('Create volume from snapshot does not have support '
-                    'for virtual pool A and B.')
-            LOG.error(msg)
-            raise exception.InvalidInput(reason=msg)
         self.get_volume_stats(True)
         self._assert_enough_space_for_copy(volume['size'])
         LOG.debug("Creating Volume from snapshot %(source_id)s to "
@@ -238,7 +229,8 @@ class DotHillCommon(object):
         dest_name = self._get_vol_name(volume['id'])
         self.client_login()
         try:
-            self.client.copy_volume(orig_name, dest_name, 0, self.backend_name)
+            self.client.copy_volume(orig_name, dest_name, 0,
+                                    self.backend_name, self.backend_type)
         except exception.DotHillRequestError as ex:
             LOG.exception(_LE("Create volume failed from snapshot: %s"),
                           snapshot['id'])

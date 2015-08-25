@@ -65,14 +65,32 @@ class DotHillClient(object):
     def _assert_response_ok(self, tree):
         """Parses the XML returned by the device to check the return code.
 
-        Raises a DotHillRequestError error if the return code is not 0.
+        Raises a DotHillRequestError error if the return code is not 0
+        or one of a set of error codes that can be returned when the
+        operation was successful.
         """
+        # Get the return code for the operation, raising an exception
+        # if it is not present.
         return_code = tree.findtext(".//PROPERTY[@name='return-code']")
-        if return_code and return_code != '0':
-            raise exception.DotHillRequestError(
-                message=tree.findtext(".//PROPERTY[@name='response']"))
-        elif not return_code:
+        if not return_code:
             raise exception.DotHillRequestError(message="No status found")
+
+        # If no error occurred, just return
+        if return_code == '0':
+            return
+
+        # Get the text message for the status code
+        msg = tree.findtext(".//PROPERTY[@name='response']")
+
+        # -3501 means the operation succeeded but there's a health issue
+        if return_code == '-3501':
+            LOG.debug('Ignoring return code %s: %s' % (return_code, msg))
+            return
+
+        msg = "ERROR %s: %s" % (return_code, msg)
+        raise exception.DotHillRequestError(
+                message=tree.findtext(".//PROPERTY[@name='response']"))
+
 
     def _build_request_url(self, path, *args, **kargs):
         url = self._base_url + path
@@ -94,6 +112,7 @@ class DotHillClient(object):
         """
 
         url = self._build_request_url(path, *args, **kargs)
+        LOG.debug("DotHill Request URL = " + url)
         headers = {'dataType': 'api', 'sessionKey': self._session_key}
         try:
             xml = requests.get(url, headers=headers)
@@ -232,7 +251,10 @@ class DotHillClient(object):
         return [port['target-id'] for port in self.get_active_target_ports()
                 if port['port-type'] == "iSCSI"]
 
-    def copy_volume(self, src_name, dest_name, same_bknd, dest_bknd_name):
+    def linear_copy_volume(self, src_name, dest_name, same_bknd,
+                           dest_bknd_name):
+        """Copy a linear volume."""
+
         self._request("/volumecopy",
                       dest_name,
                       dest_vdisk=dest_bknd_name,
@@ -265,6 +287,45 @@ class DotHillClient(object):
                 count += 1
 
         time.sleep(5)
+
+    def copy_volume(self, src_name, dest_name, same_bknd, dest_bknd_name,
+                    backend_type='virtual'):
+        """Copy a linear or virtual volume."""
+
+        if backend_type == 'linear':
+            return linear_copy_volume(self, src_name, dest_name, same_bknd,
+                                      dest_bknd_name)
+
+        # Copy a virtual volume to another in the same pool.
+        status = self._request("/copy/volume", src_name, name=dest_name)
+        LOG.debug("Volume copy of volume '%s' to '%s' started.",
+                  src_name, dest_name)
+
+        # Loop until this volume copy is no longer in progress
+        while self.volume_copy_in_progress(src_name):
+            time.sleep(5)
+
+        # Once the copy operation is finished, check to ensure that
+        # the volume was not deleted due to a lack of space.  An
+        # exception will be raised if the named volume is not present.
+        tree = self._request("/show/volumes", dest_name)
+        LOG.debug("Volume copy of volume '%s' to '%s' completed.",
+                  src_name, dest_name)
+
+    def volume_copy_in_progress(self, src_name):
+        """Check if a volume copy is in progress for the named volume."""
+
+        # 'show volume-copies' always succeeds, even if none in progress
+        tree = self._request("/show/volume-copies")
+
+        # Find 0 or 1 job(s) with source volume we're interested in
+        q = "OBJECT[PROPERTY[@name='source-volume']/text()='%s']" % src_name
+        joblist = tree.xpath(q)
+        if len(joblist) == 0:
+            return False
+        LOG.debug("Volume copy of volume '%s' is %s complete.", 
+                  src_name, joblist[0].findtext("PROPERTY[@name='progress']"))
+        return True
 
     def _check_host(self, host):
         host_status = -1
