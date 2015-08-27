@@ -284,11 +284,11 @@ class DotHillClient(object):
         """Copy a linear or virtual volume."""
 
         if backend_type == 'linear':
-            return linear_copy_volume(self, src_name,
-                                      dest_name, dest_bknd_name)
+            return self.linear_copy_volume(self, src_name,
+                                           dest_name, dest_bknd_name)
 
         # Copy a virtual volume to another in the same pool.
-        status = self._request("/copy/volume", src_name, name=dest_name)
+        self._request("/copy/volume", src_name, name=dest_name)
         LOG.debug("Volume copy of '%s' to '%s' started.",
                   src_name, dest_name)
 
@@ -299,7 +299,7 @@ class DotHillClient(object):
         # Once the copy operation is finished, check to ensure that
         # the volume was not deleted because of a subsequent error. An
         # exception will be raised if the named volume is not present.
-        tree = self._request("/show/volumes", dest_name)
+        self._request("/show/volumes", dest_name)
         LOG.debug("Volume copy of '%s' to '%s' completed.",
                   src_name, dest_name)
 
